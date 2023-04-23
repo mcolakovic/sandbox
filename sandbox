@@ -103,7 +103,7 @@ function overwrite() {
 
 # Yes/no prompt around the clean command
 function ask_clean () {
-  if ask "$1"; then
+  if ask "$1" "Y"; then
     sandbox clean
   else
     exit 1
@@ -275,7 +275,13 @@ sandbox () {
 
     # wait for startup
     while [[ $ATTEMPTS_REMAINING -gt 0 ]]; do
-      INDEXER_STATUS=$(curl -sL -w "%{http_code}\n" "localhost:$IPORT/health" -o /dev/null || true)
+
+      if [ -z "$INDEXER_DISABLED" ]; then
+          INDEXER_STATUS=$(curl -sL -w "%{http_code}\n" "localhost:$IPORT/health" -o /dev/null || true)
+      else
+          INDEXER_STATUS="200"
+      fi
+
       ALGOD_STATUS=$(curl -sL -w "%{http_code}\n" "localhost:$APORT/health" -o /dev/null || true)
       if [ "$ALGOD_STATUS" == "200" ] && [ "$INDEXER_STATUS" == "200" ]; then
         ATTEMPTS_REMAINING=0
@@ -418,8 +424,8 @@ sandbox () {
         return
         ;;
       indexer-db)
-        statusline "Entering /bin/bash session in the indexer-db container..."
-        dc_pty exec indexer-db //bin/bash
+        statusline "Entering psql session in the indexer-db container..."
+        dc_pty exec indexer-db psql -U algorand -d indexer_db
         return
         ;;
     esac
